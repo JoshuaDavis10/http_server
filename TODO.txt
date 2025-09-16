@@ -1,0 +1,17 @@
+TODO:
+[x] read .html files to strings, get their size in bytes 
+(for Content-Length)
+[x] append .html strings to an HTTP header with appropriate Content-Length
+and send the resulting string over the socket (this should allow browser
+to figure out how many bytes the data is so it's not hanging waiting
+to read more stuff)
+[ ] make 2nd page (i.e. "form submitted successfully" or whatever page
+have an option to submit another form, i.e. go back to 1st page)
+[ ] store the form data in a todo list in Dropbox
+[ ] test with phone
+[ ] test with phone while not on same network (i.e. have a friend do
+it or smn)
+
+good article on basically what I'm trying to do
+https://medium.com/@ryanradder0/building-an-http-server-from-scratch-a-journey-beyond-frameworks-28dc49e94a2a
+
