@@ -9,8 +9,8 @@ static void (*jstring_log)(const char*, ...);
 #define JSTRING_ASSERT(expression, msg) \
 if(!expression) \
 { \
-	char tmp = *((char*)(0)); \
-	jstring_log(msg); \
+	jstring_log("JSTRING ASSERTION: %s", msg); \
+	char halt = *((char*)0); \
 }
 
 
@@ -56,7 +56,7 @@ typedef double f64;
  * works? then they can kinda take it from there as far as how they want to print the messages
  * or better yet just turn logging off!
  */
-static void jstring_log_stub(const char*, ...) { JSTRING_ASSERT(0, "using stub for logging"); }
+static void jstring_log_stub(const char*, ...) { }
 static void (*jstring_log)(const char*, ...) = jstring_log_stub;
     
 /* NOTE: goal is to have a header only string library that can compile
@@ -147,6 +147,8 @@ static b8 jstring_memory_activate(u64 size, void *address)
 {
 	if(jstring_temporary_memory_info.activated)
 	{
+		jstring_log("jstring_memory_activate: jstring memory has already been activated! "
+					"returning 0.");
 		return false;
 	}
 	jstring_temporary_memory_info.size = size;
@@ -154,7 +156,10 @@ static b8 jstring_memory_activate(u64 size, void *address)
 	jstring_temporary_memory_info.address = address;
 	jstring_temporary_memory_info.activated = true;
 
-	jstring_log("jstring: test log %d", 0);
+	jstring_log(
+		"jstring_memory_activate: jstring memory activated - %u bytes @%p", 
+		jstring_temporary_memory_info.size,
+		jstring_temporary_memory_info.address);
 	return true;
 }
 
