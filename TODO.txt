@@ -5,6 +5,10 @@ TODO:
 and send the resulting string over the socket (this should allow browser
 to figure out how many bytes the data is so it's not hanging waiting
 to read more stuff)
+
+NOTE: I added my string library to the workflow, and things are not quite working so you need to debug it!
+I've also added TODOs for things that I need from the string library
+
 [ ] make 2nd page (i.e. "form submitted successfully" or whatever page
 have an option to submit another form, i.e. go back to 1st page)
 [ ] store the form data in a todo list in Dropbox
