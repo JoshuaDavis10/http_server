@@ -16,52 +16,35 @@
  * x compare two strings
  *   - equals convenience function as well (i.e. are the two strings
  *   equal).
- * - concatenate strings
+ * x concatenate strings
+ * x get length of string
  * - copy (can copy substring of one string to substring of other string)
- * - begins with (substring or char)
- * - ends with (substring or char)
- * - begins with (substring or char)
+ * x begins with (substring or char)
+ * x ends with (substring or char)
  * - format (create a string from a given format string? this seems
  *   complicated, but is obv very useful. actually you know what, you
  *   can do it bro wtheck ofc u can) 
- * - index of: get index of a char or substring
+ * x index of: get index of a char or substring
  * - last index of
- * - insert: insert char or substring at an index
- * - is_empty: simple convenience function I guess? is this useful at
- *   all?
- * - join: concatenates strings or list of strings with a given
- *   "separator" in between each string (i.e. a list with ", " between
- *   each string or smn could be a use case)
+ * x to upper/to lower
+ * x insert: insert char or substring at an index
  * - remove: remove instances of char or substring or characters at a 
  *   given index -> a few possible versions of this one, make them all
  * - replace: replace chars at a given index or replace instances of
  *   char or substring with char or substring
+ * - join: concatenates strings or list of strings with a given
+ *   "separator" in between each string (i.e. a list with ", " between
+ *   each string or smn could be a use case)
  * - split: like strtok but actually good basically
- * - to upper/to lower
  * - trim: remove whitespace from beginning or end, or like all whitespace
  *   idk that could be useful too
  * 
+ * - unit test suite once you have a set of functions you like
+ * that are implemented in a way that you like
+ *
  * so there ya go! good luck :) - josh
  *
  */
-
-/* NOTE: could have like a free-list type thing, where if strings get 
- * "freed" we flag that so that we can fill those empty "blocks" later...
- * simpler would be a linear allocator ? 
- * maybe there's 2 types of strings - permanent, and temporary
- * we have a function that wipes temporary? and temporary is a bump 
- * allocator permanent also a bump allocator that gets freed at the 
- * end... ? that seems like it covers most use cases as long as there's 
- * enough storage for "permanent" strings. Note also the way the 
- * library is setup, permanent strings should be able to be
- * stored in place -> WAIT PROBLEM THO, if we add to strings, 
- * concatenate, insert etc... how do we account for that?
- * okay, this is an interesting problem space... maybe we do need like 
- * a first-fit free list (or red-black tree for efficiency <- more likely)
- * that allocates double the string size to leave room and then like 
- * moves strings if it has to? I just feel like the more can be done 
- * to strings IN PLACE the better
- */ 
 
 /* NOTE: for now I'm going to do just a temporary store that we can 
  * clear periodically or whatever to get the functions up and running 
@@ -72,4 +55,3 @@
  * make sense? 
  */
 
- /* TODO: unit testing */

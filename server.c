@@ -37,11 +37,8 @@ jstring create_http_response_html(const char *response, u64 size)
 	jstring http_content_length_string = 
 		jstring_create_integer(size);
 
-	/* TODO: obv this is cumbersome, need jstring_concatenate_raw */
-	jstring newline_string =
-		jstring_create_temporary("\n\n", 2);
 	jstring_concatenate_jstring(&http_header, http_content_length_string);
-	jstring_concatenate_jstring(&http_header, newline_string);
+	jstring_concatenate_raw(&http_header, "\n\n");
 	jstring_concatenate_jstring(&http_header, http_response);
 	return http_header;
 }

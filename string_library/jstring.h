@@ -3,18 +3,14 @@
 
 static void (*jstring_log)(const char*, ...);
 
-/* TODO: this assertion sets off the address sanitizer, 
- * so I'll have to find a way
- * around that in order to actually see the assertion message
- */
+/* NOTE: this assertion sets off the address sanitizer */
 #define JSTRING_ASSERT(expression, msg) \
-if(!expression) \
+if(!(expression)) \
 { \
 	jstring_log("JSTRING ASSERTION: %s. file: %s. line: %d", \
 			msg, __FILE__, __LINE__); \
-	char halt = *((char*)0); \
+	char halt = *((char*)0);  \
 }
-
 
 /* NOTE: this is how you do a static assert without having to include C 
  * standard headers and stuff so this is how we doin' it 
@@ -156,6 +152,11 @@ static jstring jstring_create_temporary(
 		const char *chars, 
 		u64 length)
 {
+	/* TODO: handle these assertion cases? */
+	if(chars == 0)
+	{
+		JSTRING_ASSERT(0, " ");
+	}
 	if(jstring_temporary_memory_info.size < 
 		jstring_temporary_memory_info.offset + ((length + 1) * 2))
 	{
@@ -197,8 +198,14 @@ static jstring jstring_create_temporary(
 	return result_jstring;
 }
 
-/* TODO: */
-static b8 jstring_create_format_string(const char *chars, ...);
+static b8 jstring_create_format_string(const char *chars, ...)
+{
+	/* TODO: signed numbers, unsigned numbers, strings should be the
+	 * only format symbols you really need to recognize for now
+	 * eventually floats 
+	 */
+	return true;
+}
 
 static i32 jstring_compare_raw(const char *first, const char *second)
 {
@@ -224,6 +231,19 @@ static i32 jstring_compare_raw(const char *first, const char *second)
 		return 1;
 	}
 	return 0;
+}
+
+static u32 jstring_length(char *string)
+{
+	char *tmp = string;
+	u32 length = 0;
+	while(*tmp != '\0')
+	{
+		tmp++;
+		length++;
+		JSTRING_ASSERT(length < 4096, "really long string");
+	}
+	return length;
 }
 
 static i32 jstring_compare_jstring(jstring first, jstring second)
@@ -334,10 +354,94 @@ static b8 jstring_concatenate_jstring(
 }
 
 static b8 jstring_concatenate_raw(
-		jstring *to, const char *chars)
+		jstring *to, char *from)
 {
-	/* TODO: */
+	u32 from_length = jstring_length(from);
+
+	if(!jstring_temporary_memory_info.activated)
+	{
+		JSTRING_ASSERT(0, " ");
+	}
+	if(to->length + from_length < to->capacity)
+	{
+		/* concatenate in place */
+		char *tmp = to->data + to->length;
+		u32 index;
+		for(index = 0; index <= from_length; index++)
+		{
+			tmp[index] = from[index];
+		}
+		to->length += from_length;
+	}
+	else
+	{
+		/* concatenate by creating new jstring */
+		if(jstring_temporary_memory_info.size < 
+			jstring_temporary_memory_info.offset + 
+			((to->length + from_length + 1) * 2))
+		{
+			JSTRING_ASSERT(0, " ");
+		}
+		char *tmp = jstring_temporary_memory_info.address +
+			jstring_temporary_memory_info.offset;
+
+		u32 index;
+		for(index = 0; index < to->length; index++)
+		{
+			tmp[index] = to->data[index];
+		}
+		to->data = tmp;
+		tmp += to->length;
+		for(index = 0; index <= from_length; index++)
+		{
+			tmp[index] = from[index];
+		}
+		to->length += from_length;
+		to->capacity = 2 * (to->length + 1);
+		jstring_temporary_memory_info.offset += to->capacity;
+	}
 	return true;
+}
+
+static b8 jstring_begins_with(jstring string, char *chars)
+{
+	u32 chars_length = jstring_length(chars);
+	if(chars_length > string.length)
+	{
+		return false;
+	}
+	u32 index = 0;
+	while(chars[index] == string.data[index])
+	{
+		index++;
+		if(index == chars_length)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static b8 jstring_ends_with(jstring string, char *chars)
+{
+	u32 chars_length = jstring_length(chars);
+	if(chars_length > string.length)
+	{
+		return false;
+	}
+	u32 index = 0;
+	while(chars[index] == 
+			string.data[string.length - chars_length + index])
+	{
+		index++;
+		if(index == chars_length)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 static jstring jstring_create_integer(u32 number)
@@ -366,6 +470,294 @@ static jstring jstring_create_integer(u32 number)
 	return_string.capacity = 2 * (return_string.length + 1);
 	jstring_temporary_memory_info.offset += return_string.capacity;
 	return return_string;
+}
+
+static i32 jstring_index_of_raw(jstring string, char *chars)
+{
+	u32 chars_length = jstring_length(chars);
+	u32 index;
+	for(index = 0; index <= string.length - chars_length; index++)
+	{
+		u32 inner_index;
+		for(inner_index = 0; inner_index < chars_length; inner_index++)
+		{
+			if(string.data[inner_index + index] != chars[inner_index])
+			{
+				break;
+			}
+			if(inner_index == chars_length - 1)
+			{
+				return index;
+			}
+		}
+	}
+	/* NOTE: return -1 if chars not found in string */
+	return -1;
+}
+
+/* TODO: you really need better parameter names bro */
+static i32 jstring_index_of_jstring(jstring string, jstring check)
+{
+	u32 index;
+	for(index = 0; index <= string.length - check.length; index++)
+	{
+		u32 inner_index;
+		for(inner_index = 0; inner_index < check.length; inner_index++)
+		{
+			if(string.data[inner_index + index] != 
+					check.data[inner_index])
+			{
+				break;
+			}
+			if(inner_index == check.length - 1)
+			{
+				return index;
+			}
+		}
+	}
+	/* NOTE: return -1 if check not found in string */
+	return -1;
+}
+
+static void jstring_to_upper_in_place(jstring *string)
+{
+	u32 index;
+	for(index = 0; index < string->length; index++)
+	{
+		if((string->data[index] < 123) && (string->data[index] > 96))
+		{
+			string->data[index] = string->data[index] - 32;
+		}
+	}
+}
+
+static void jstring_to_lower_in_place(jstring *string)
+{
+	u32 index;
+	for(index = 0; index < string->length; index++)
+	{
+		if((string->data[index] < 91) && (string->data[index] > 64))
+		{
+			string->data[index] = string->data[index] + 32;
+		}
+	}
+}
+
+static jstring jstring_to_upper_jstring(jstring string)
+{
+	u32 index;
+	jstring return_jstring;
+	char *tmp = jstring_temporary_memory_info.address +
+		jstring_temporary_memory_info.offset;
+
+	return_jstring.length = string.length;
+	return_jstring.capacity = (return_jstring.length + 1) * 2;
+
+	for(index = 0; index <= string.length; index++)
+	{
+		if((string.data[index] < 123) && (string.data[index] > 96))
+		{
+			tmp[index] = string.data[index] - 32;
+		}
+		else
+		{
+			tmp[index] = string.data[index];
+		}
+	}
+
+	jstring_temporary_memory_info.offset += return_jstring.capacity;
+
+	return return_jstring;
+}
+
+static jstring jstring_to_lower_jstring(jstring string)
+{
+	u32 index;
+	jstring return_jstring;
+	char *tmp = jstring_temporary_memory_info.address +
+		jstring_temporary_memory_info.offset;
+
+	return_jstring.length = string.length;
+	return_jstring.capacity = (return_jstring.length + 1) * 2;
+
+	for(index = 0; index <= string.length; index++)
+	{
+		if((string.data[index] < 91) && (string.data[index] > 64))
+		{
+			tmp[index] = string.data[index] + 32;
+		}
+		else
+		{
+			tmp[index] = string.data[index];
+		}
+	}
+
+	jstring_temporary_memory_info.offset += return_jstring.capacity;
+
+	return return_jstring;
+}
+
+/* NOTE: convenience function for insert/remove/replace/trim 
+ * type functions. really shouldn't be used by "users" of the jstring
+ * library, but anything goes lol I want "them" (me) to have full control
+ * if needed. I mean users have direct access to the jstring memory since 
+ * they allocate it themselves. dangerous but useful. they could write
+ * this function themselves
+ */
+static b8 copy_temporary_memory_chars(
+		char *address, 
+		u64 to_offset,
+		u32 num_chars)
+{
+	/* don't let it move chars past jstring memory, basically */
+	if((address < (char*)jstring_temporary_memory_info.address) ||
+		(address > ((char*)jstring_temporary_memory_info.address +
+			jstring_temporary_memory_info.size -
+			to_offset - num_chars)))
+	{
+		JSTRING_ASSERT(0, " ");
+		return false;
+	}
+
+	i32 index;
+	/* copy it backwards so that you don't overwrite the data
+	 * that you're copying. hope that makes sense
+	 */
+	for(index = num_chars - 1; index >= 0; index--)
+	{
+		(address + to_offset)[index] = address[index];
+	}
+	
+	return true;
+}
+
+static b8 jstring_insert_chars_at(jstring *to, char *chars, u32 index)
+{
+	if(index > to->length)
+	{
+		/* NOTE: this might technically be caught by the next if statement
+		 * ? perchance
+		 */
+		JSTRING_ASSERT(0, " ");
+		return false;
+	}
+	u32 chars_length = jstring_length(chars);
+
+	/* don't need to create a whole new jstring */
+	if((to->capacity - to->length) > chars_length)
+	{
+		copy_temporary_memory_chars(
+			to->data + index, chars_length, to->length - index + 1); 
+		u32 loop_index;
+		for(loop_index = 0; loop_index < chars_length; loop_index++)
+		{
+			to->data[index + loop_index] = chars[loop_index];
+		}
+	}
+	/* need to create a whole new jstring */
+	else
+	{
+		char *tmp = jstring_temporary_memory_info.address +
+			jstring_temporary_memory_info.offset;
+		u32 new_length = to->length + chars_length;
+
+		if(jstring_temporary_memory_info.offset + ((new_length + 1) * 2) >
+				jstring_temporary_memory_info.size)
+		{
+			JSTRING_ASSERT(0, " ");
+			return false;
+		}
+		
+		u32 loop_index;
+		for(loop_index = 0; loop_index < index; loop_index++)
+		{
+			tmp[loop_index] = to->data[loop_index];
+		}
+		for(loop_index = 0; loop_index < chars_length; loop_index++)
+		{
+			tmp[index + loop_index] = chars[loop_index];
+		}
+		for(
+			loop_index = 0; 
+			loop_index < (to->length - index + 1);
+			loop_index++)
+		{
+			tmp[index + chars_length + loop_index] = 
+				to->data[index + loop_index];
+		}
+
+		to->length = new_length;
+		to->capacity = (to->length + 1) * 2;
+		to->data = tmp;
+
+		jstring_temporary_memory_info.offset += to->capacity;
+	}
+
+	return true;
+}
+
+static b8 jstring_insert_jstring_at(jstring *to, jstring from, u32 index)
+{
+	if(index > to->length)
+	{
+		/* NOTE: this might technically be caught by the next if statement
+		 * ? perchance
+		 */
+		JSTRING_ASSERT(0, " ");
+		return false;
+	}
+
+	/* don't need to create a whole new jstring */
+	if((to->capacity - to->length) > from.length)
+	{
+		copy_temporary_memory_chars(
+			to->data + index, from.length, to->length - index + 1); 
+		u32 loop_index;
+		for(loop_index = 0; loop_index < from.length; loop_index++)
+		{
+			to->data[index + loop_index] = from.data[loop_index];
+		}
+	}
+	/* need to create a whole new jstring */
+	else
+	{
+		char *tmp = jstring_temporary_memory_info.address +
+			jstring_temporary_memory_info.offset;
+		u32 new_length = to->length + from.length;
+
+		if(jstring_temporary_memory_info.offset + ((new_length + 1) * 2) >
+				jstring_temporary_memory_info.size)
+		{
+			JSTRING_ASSERT(0, " ");
+			return false;
+		}
+		
+		u32 loop_index;
+		for(loop_index = 0; loop_index < index; loop_index++)
+		{
+			tmp[loop_index] = to->data[loop_index];
+		}
+		for(loop_index = 0; loop_index < from.length; loop_index++)
+		{
+			tmp[index + loop_index] = from.data[loop_index];
+		}
+		for(
+			loop_index = 0; 
+			loop_index < (to->length - index + 1);
+			loop_index++)
+		{
+			tmp[index + from.length + loop_index] = 
+				to->data[index + loop_index];
+		}
+
+		to->length = new_length;
+		to->capacity = (to->length + 1) * 2;
+		to->data = tmp;
+
+		jstring_temporary_memory_info.offset += to->capacity;
+	}
+
+	return true;
 }
 
 #endif

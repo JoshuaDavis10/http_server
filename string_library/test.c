@@ -7,7 +7,7 @@
 
 #define MAX_LOGGER_MESSAGE_SIZE 1024
 
-void print_memory(char *address, u64 offset, u64 size)
+void print_memory_ascii(char *address, u64 offset, u64 size)
 {
 	u64 index;
 	char *tmp = ((char*)jstring_temporary_memory_info.address) + 
@@ -17,6 +17,10 @@ void print_memory(char *address, u64 offset, u64 size)
 			address, offset, size);
 	for(index = 0; index < size; index++)
 	{
+		if(index % 50 == 0)
+		{
+			putchar('\n');
+		}
 		if(tmp[index] == '\0')
 		{
 			putchar('|');
@@ -42,14 +46,16 @@ int main()
 	jstring_load_logging_function(jstring_logger);
 	jstring_memory_activate(1024, string_memory);
 
-	jstring first = jstring_create_temporary("first", 5);
-	jstring second = jstring_create_temporary("second", 6);
-	jstring_memory_reset(1024, string_memory);
-	memset(string_memory, '-', 1024);
-	jstring third = jstring_create_temporary("third", 5);
-	jstring fourth = jstring_create_temporary("fourth", 6);
-
-	print_memory(string_memory, 0, 1024);
+	jstring hello_string = jstring_create_temporary("hello", 5);
+	print_memory_ascii(string_memory, 0, 300);
+	jstring long_string = jstring_create_temporary(
+			"antidisestablishmentarianism", 
+			jstring_length("antidisestablishmentarianism"));
+	print_memory_ascii(string_memory, 0, 300);
+	jstring_insert_jstring_at(&hello_string, long_string, 3);
+	print_memory_ascii(string_memory, 0, 300);
+	jstring_insert_jstring_at(&long_string, hello_string, 3);
+	print_memory_ascii(string_memory, 0, 300);
 
 	return(0);
 }
