@@ -207,6 +207,19 @@ static b8 jstring_create_format_string(const char *chars, ...)
 	return true;
 }
 
+static u32 jstring_length(const char *string)
+{
+	const char *tmp = string;
+	u32 length = 0;
+	while(*tmp != '\0')
+	{
+		tmp++;
+		length++;
+		JSTRING_ASSERT(length < 4096, "really long string");
+	}
+	return length;
+}
+
 static i32 jstring_compare_raw(const char *first, const char *second)
 {
 	u32 index = 0;
@@ -231,19 +244,6 @@ static i32 jstring_compare_raw(const char *first, const char *second)
 		return 1;
 	}
 	return 0;
-}
-
-static u32 jstring_length(char *string)
-{
-	char *tmp = string;
-	u32 length = 0;
-	while(*tmp != '\0')
-	{
-		tmp++;
-		length++;
-		JSTRING_ASSERT(length < 4096, "really long string");
-	}
-	return length;
 }
 
 static i32 jstring_compare_jstring(jstring first, jstring second)
@@ -275,6 +275,26 @@ static i32 jstring_compare_jstring(jstring first, jstring second)
 	}
 
 	return 0;
+}
+
+/* TODO: jstring_compare_jstring_and_raw */
+
+static i32 jstring_equals_raw(const char *first, const char *second)
+{
+	if(jstring_compare_raw(first, second) == 0)
+	{
+		return true;
+	}
+	return false;
+}
+
+static i32 jstring_equals_jstring(jstring first, jstring second)
+{
+	if(jstring_compare_jstring(first, second) == 0)
+	{
+		return true;
+	}
+	return false;
 }
 
 static jstring jstring_create_substring_temporary(
@@ -354,7 +374,7 @@ static b8 jstring_concatenate_jstring(
 }
 
 static b8 jstring_concatenate_raw(
-		jstring *to, char *from)
+		jstring *to, const char *from)
 {
 	u32 from_length = jstring_length(from);
 
@@ -403,7 +423,7 @@ static b8 jstring_concatenate_raw(
 	return true;
 }
 
-static b8 jstring_begins_with(jstring string, char *chars)
+static b8 jstring_begins_with(jstring string, const char *chars)
 {
 	u32 chars_length = jstring_length(chars);
 	if(chars_length > string.length)
@@ -423,7 +443,7 @@ static b8 jstring_begins_with(jstring string, char *chars)
 	return false;
 }
 
-static b8 jstring_ends_with(jstring string, char *chars)
+static b8 jstring_ends_with(jstring string, const char *chars)
 {
 	u32 chars_length = jstring_length(chars);
 	if(chars_length > string.length)
@@ -472,7 +492,7 @@ static jstring jstring_create_integer(u32 number)
 	return return_string;
 }
 
-static i32 jstring_index_of_raw(jstring string, char *chars)
+static i32 jstring_index_of_raw(jstring string, const char *chars)
 {
 	u32 chars_length = jstring_length(chars);
 	u32 index;
@@ -495,7 +515,7 @@ static i32 jstring_index_of_raw(jstring string, char *chars)
 	return -1;
 }
 
-/* TODO: you really need better parameter names bro */
+/* NOTE: you really need better parameter names bro */
 static i32 jstring_index_of_jstring(jstring string, jstring check)
 {
 	u32 index;
@@ -517,6 +537,55 @@ static i32 jstring_index_of_jstring(jstring string, jstring check)
 	}
 	/* NOTE: return -1 if check not found in string */
 	return -1;
+}
+
+static i32 jstring_last_index_of_raw(jstring string, const char *chars)
+{
+	u32 chars_length = jstring_length(chars);
+	u32 index;
+	i32 last = -1;
+	for(index = 0; index <= string.length - chars_length; index++)
+	{
+		u32 inner_index;
+		for(inner_index = 0; inner_index < chars_length; inner_index++)
+		{
+			if(string.data[inner_index + index] != chars[inner_index])
+			{
+				break;
+			}
+			if(inner_index == chars_length - 1)
+			{
+				jstring_log("%d", last);
+				last = index;
+			}
+		}
+	}
+	/* NOTE: return -1 if chars not found in string */
+	return last;
+}
+
+static i32 jstring_last_index_of_jstring(jstring string, jstring check)
+{
+	u32 index;
+	i32 last = -1;
+	for(index = 0; index <= string.length - check.length; index++)
+	{
+		u32 inner_index;
+		for(inner_index = 0; inner_index < check.length; inner_index++)
+		{
+			if(string.data[inner_index + index] != 
+					check.data[inner_index])
+			{
+				break;
+			}
+			if(inner_index == check.length - 1)
+			{
+				last = index;
+			}
+		}
+	}
+	/* NOTE: return -1 if check not found in string */
+	return last;
 }
 
 static void jstring_to_upper_in_place(jstring *string)
@@ -606,32 +675,33 @@ static jstring jstring_to_lower_jstring(jstring string)
  */
 static b8 copy_temporary_memory_chars(
 		char *address, 
-		u64 to_offset,
-		u32 num_chars)
+		i64 to_offset,
+		i32 num_chars)
 {
-	/* don't let it move chars past jstring memory, basically */
-	if((address < (char*)jstring_temporary_memory_info.address) ||
-		(address > ((char*)jstring_temporary_memory_info.address +
-			jstring_temporary_memory_info.size -
-			to_offset - num_chars)))
-	{
-		JSTRING_ASSERT(0, " ");
-		return false;
-	}
-
 	i32 index;
-	/* copy it backwards so that you don't overwrite the data
-	 * that you're copying. hope that makes sense
-	 */
-	for(index = num_chars - 1; index >= 0; index--)
+	if(to_offset > 0)
 	{
-		(address + to_offset)[index] = address[index];
+		/* copy it backwards so that you don't overwrite the data
+		 * that you're copying. hope that makes sense
+		 */
+		for(index = num_chars - 1; index >= 0; index--)
+		{
+			(address + to_offset)[index] = address[index];
+		}
+	}
+	else
+	{
+		for(index = 0; index < num_chars; index++)
+		{
+			(address + to_offset)[index] = address[index];
+		}
 	}
 	
 	return true;
 }
 
-static b8 jstring_insert_chars_at(jstring *to, char *chars, u32 index)
+static b8 jstring_insert_chars_at(
+		jstring *to, const char *chars, u32 index)
 {
 	if(index > to->length)
 	{
@@ -653,6 +723,7 @@ static b8 jstring_insert_chars_at(jstring *to, char *chars, u32 index)
 		{
 			to->data[index + loop_index] = chars[loop_index];
 		}
+		to->length += chars_length;
 	}
 	/* need to create a whole new jstring */
 	else
@@ -717,6 +788,7 @@ static b8 jstring_insert_jstring_at(jstring *to, jstring from, u32 index)
 		{
 			to->data[index + loop_index] = from.data[loop_index];
 		}
+		to->length += from.length;
 	}
 	/* need to create a whole new jstring */
 	else
@@ -759,5 +831,171 @@ static b8 jstring_insert_jstring_at(jstring *to, jstring from, u32 index)
 
 	return true;
 }
+
+static b8 jstring_remove_at(jstring *string, u32 index, u32 remove_length)
+{
+	if(index + remove_length > string->length)
+	{
+		JSTRING_ASSERT(0, " ");
+		return false;
+	}
+
+	i32 temp = (i32)remove_length;
+	if(!copy_temporary_memory_chars(
+		(string->data + index + remove_length), 
+		(-temp),
+		(string->length - index - remove_length + 1)))
+	{
+		JSTRING_ASSERT(0, " ");
+		return false;
+	}
+
+	string->length -= remove_length;
+
+	return true;
+}
+
+static b8 jstring_remove_chars(jstring *string, const char *chars)
+{
+	i32 chars_index = jstring_index_of_raw(*string, chars);
+
+	if(chars_index < 0)
+	{
+		jstring_log("jstring_remove_chars: '%s' not in string @%p",
+				chars, string->data);
+		return false;
+	}
+
+	if(!jstring_remove_at(string, chars_index, jstring_length(chars)))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+static b8 jstring_remove_chars_all(jstring *string, const char *chars)
+{
+	i32 chars_index = jstring_index_of_raw(*string, chars);
+
+	if(chars_index < 0)
+	{
+		jstring_log("jstring_remove_chars: '%s' not in string @%p",
+				chars, string->data);
+		return false;
+	}
+
+	while(chars_index > 0)
+	{
+		if(!jstring_remove_at(string, chars_index, jstring_length(chars)))
+		{
+			return false;
+		}
+		chars_index = jstring_index_of_raw(*string, chars);
+	}
+
+	return true;
+}
+
+static b8 jstring_remove_jstring(jstring *string, jstring remove_string)
+{
+	i32 chars_index = jstring_index_of_jstring(*string, remove_string);
+
+	if(chars_index < 0)
+	{
+		jstring_log("jstring_remove_chars: '%s' not in string @%p",
+				remove_string.data, string->data);
+		return false;
+	}
+
+	if(!jstring_remove_at(string, chars_index, remove_string.length))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+static b8 jstring_remove_jstring_all(
+		jstring *string, 
+		jstring remove_string)
+{
+	i32 chars_index = jstring_index_of_jstring(*string, remove_string);
+
+	if(chars_index < 0)
+	{
+		jstring_log("jstring_remove_chars: '%s' not in string @%p",
+				remove_string.data, string->data);
+		return false;
+	}
+
+	while(chars_index > 0)
+	{
+		if(!jstring_remove_at(string, chars_index, remove_string.length))
+		{
+			return false;
+		}
+		chars_index = jstring_index_of_jstring(*string, remove_string);
+	}
+
+	return true;
+}
+
+/* NOTE: faster way to do this would just be to paste the replacement
+ * string over the old stuff rather than calling these 2 already 
+ * existing functions ?
+ */
+static b8 jstring_replace_at_raw(
+		jstring *string, 
+		u32 index, 
+		u32 remove_length,
+		const char *chars)
+{
+	if(!jstring_remove_at(string, index, remove_length))
+	{
+		return false;
+	}
+	if(!jstring_insert_chars_at(string, chars, index))
+	{
+		return false;
+	}
+	return true;
+}
+
+/* NOTE: faster way to do this would just be to paste the replacement
+ * string over the old stuff rather than calling these 2 already 
+ * existing functions ?
+ */
+static b8 jstring_replace_at_jstring(
+		jstring *string, 
+		u32 index, 
+		u32 remove_length,
+		jstring replace_string)
+{
+	if(!jstring_remove_at(string, index, remove_length))
+	{
+		return false;
+	}
+	if(!jstring_insert_jstring_at(string, replace_string, index))
+	{
+		return false;
+	}
+	return true;
+}
+
+/* TODO: implement these if you ever feel like they'd be really nice
+ * to have I guess
+ *
+ *		jstring_replace_jstring_with_raw
+ *		jstring_replace_raw_with_jstring
+ *		jstring_replace_raw_with_raw
+ *		jstring_replace_jstring_with_jstring
+ *
+ *		also maybe (?):
+ *		jstring_replace_jstring_with_raw_all
+ *		jstring_replace_raw_with_jstring_all
+ *		jstring_replace_raw_with_raw_all
+ *		jstring_replace_jstring_with_jstring_all
+ */
 
 #endif

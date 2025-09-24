@@ -46,16 +46,39 @@ int main()
 	jstring_load_logging_function(jstring_logger);
 	jstring_memory_activate(1024, string_memory);
 
-	jstring hello_string = jstring_create_temporary("hello", 5);
-	print_memory_ascii(string_memory, 0, 300);
-	jstring long_string = jstring_create_temporary(
-			"antidisestablishmentarianism", 
-			jstring_length("antidisestablishmentarianism"));
-	print_memory_ascii(string_memory, 0, 300);
-	jstring_insert_jstring_at(&hello_string, long_string, 3);
-	print_memory_ascii(string_memory, 0, 300);
-	jstring_insert_jstring_at(&long_string, hello_string, 3);
-	print_memory_ascii(string_memory, 0, 300);
+	jstring test = jstring_create_temporary(
+			"asdf asd as", 
+			jstring_length("asdf asd as"));
+
+	jstring asdfg = jstring_create_temporary(
+			"asdfg", jstring_length("asdfg"));
+	jstring asdf = jstring_create_temporary(
+			"asdf", jstring_length("asdf"));
+	jstring asd = jstring_create_temporary(
+			"asd", jstring_length("asd"));
+	jstring as = jstring_create_temporary(
+			"as", jstring_length("as"));
+
+	print_memory_ascii(string_memory, 0, 100);
+
+	printf("last index of 'asdfg': %d\n", 
+			jstring_last_index_of_raw(test, "asdfg"));
+	printf("last index of 'asdf': %d\n", 
+			jstring_last_index_of_raw(test, "asdf"));
+	printf("last index of 'asd': %d\n", 
+			jstring_last_index_of_raw(test, "asd"));
+	printf("last index of 'as': %d\n", 
+			jstring_last_index_of_raw(test, "as"));
+
+	printf("last index of 'asdfg': %d\n", 
+			jstring_last_index_of_jstring(test, asdfg));
+	printf("last index of 'asdf': %d\n", 
+			jstring_last_index_of_jstring(test, asdf));
+	printf("last index of 'asd': %d\n", 
+			jstring_last_index_of_jstring(test, asd));
+	printf("last index of 'as': %d\n", 
+			jstring_last_index_of_jstring(test, as));
+
 
 	return(0);
 }
