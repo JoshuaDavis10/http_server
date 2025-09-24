@@ -28,7 +28,7 @@
  *   given index -> a few possible versions of this one, make them all
  * x replace: replace chars at a given index or replace instances of
  *   char or substring with char or substring
- * - copy: I guess copy a jstring to a char * buffer or just create
+ * x copy: I guess copy a jstring to a char * buffer or just create
  *	 another jstring instance with the same data
  * - join: concatenates strings or list of strings with a given
  *   "separator" in between each string (i.e. a list with ", " between
