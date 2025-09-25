@@ -370,7 +370,7 @@ static jstring jstring_create_substring_temporary(
 		jstring string, u32 start, u32 end)
 {
 	jstring result_jstring;
-	result_jstring.length = start-end+1;
+	result_jstring.length = end-start+1;
 	result_jstring.capacity = 2 * (result_jstring.length + 1);
 	char *tmp = 
 		jstring_temporary_memory_allocate_string(
@@ -380,6 +380,7 @@ static jstring jstring_create_substring_temporary(
 	{
 		tmp[index] = string.data[index + start];
 	}
+	tmp[index] = '\0';
 	result_jstring.data = tmp;
 
 	return result_jstring;
@@ -1146,23 +1147,179 @@ static jstring jstring_copy_to_jstring(jstring string)
 	return return_string;
 }
 
-/* XXX: NOPE STOP NOOOO!!! FIX TODOS AND STUFF BEFORE YOU ADD
- * FUNCTIONS BELOW HERE! WRITE A FUNCTION TO ALLOCATE INTO 
- * JSTRING MEMORY INSTEAD OF HARDCODING THAT BS IN LITERALLY
- * EVERY FUNCTION!
+static jstring jstring_join_jstrings(
+		jstring *strings, 
+		u32 strings_count,
+		const char *separator)
+{
+	jstring result_string;
+	u32 index;
+	u32 separator_length = jstring_length(separator);
+
+	result_string.length = 0;
+
+	/* figure out length of new string and get memory for it */
+	for(index = 0; index < strings_count; index++)
+	{
+		result_string.length += strings[index].length;
+		if(index != strings_count - 1)
+		{
+			result_string.length += separator_length;
+		}
+	}
+
+	result_string.capacity = (result_string.length + 1) * 2;
+
+	result_string.data = 
+		jstring_temporary_memory_allocate_string(result_string.capacity);
+
+	/* fill out the data for the new string */
+	char *tmp = result_string.data;
+	for(index = 0; index < strings_count; index++)
+	{
+		if(!jstring_copy_to_buffer(
+				tmp, result_string.capacity, strings[index]))
+		{
+			JSTRING_ASSERT(0, " ");
+		}
+
+		tmp += strings[index].length;
+
+		if(index != strings_count - 1)
+		{
+			u32 inner_index;
+			for(
+				inner_index = 0; 
+				inner_index < separator_length; 
+				inner_index++)
+			{
+				tmp[inner_index] = separator[inner_index];
+			}
+
+			tmp += separator_length;
+		}
+	}
+	result_string.data[result_string.length] = '\0';
+
+	return result_string;
+}
+
+/* NOTE: idk if this is a useful way to have this function but I'll
+ * use it and see if it's more/less cumbersome than strtok
  */
-
-/* XXX: I think you should write some regression tests that are like
- * not comprehensive but like run each function through a couple
- * scenarios before you write next functions. you can just slap it
- * in another .c file called like regression_test.c or smn that indicates
- * idk like exactly wtfreak it is
+/* TODO: maybe also have a version of the function that is "destructive"
+ * and does not prefer the original string, because creating the temp
+ * string in this version of the function kinda takes up a good bit
+ * of the string memory
  */
+static b32 jstring_split_jstring(
+		jstring string,
+		jstring *result_strings_list, 
+		u32 result_strings_list_size,
+		const char *separator)
+{
+	jstring temp = jstring_copy_to_jstring(string);
+	u32 separator_length = jstring_length(separator);
 
-/* TODO: join function */
+	i32 separator_index = 
+		jstring_index_of_raw(temp, separator);
+	u32 result_strings_list_index = 0;
+	while(separator_index != -1)
+	{
+		jstring_log("DEBUG: temp -> %s\nlength: %u, capacity: %u", 
+				temp.data, temp.length, temp.capacity);
+		if(result_strings_list_index >= result_strings_list_size)
+		{
+			JSTRING_ASSERT(0, " ");
+			return false;
+		}
 
-/* TODO: split function */
+		result_strings_list[result_strings_list_index] =
+			jstring_create_substring_temporary(
+				temp, 0, separator_index - 1);
 
-/* TODO: trim function */
+		if(!jstring_remove_at(
+			&temp, 0, separator_index + separator_length))
+		{
+			return false;
+		}
+
+		separator_index = 
+			jstring_index_of_raw(temp, separator);
+
+		result_strings_list_index++;
+
+	}
+	jstring_log("DEBUG: temp -> %s\nlength: %u, capacity: %u", 
+				temp.data, temp.length, temp.capacity);
+
+	result_strings_list[result_strings_list_index] =
+		jstring_create_substring_temporary(
+			temp, 0, temp.length - 1);
+
+	return true;
+}
+
+/* NOTE: convenience function for trimming functions */
+static b32 char_is_whitespace(char c)
+{
+	switch(c)
+	{
+		case 9:  /* tab */
+		case 10: /* line feed (newline) */
+		case 11: /* vertical tab (?) */
+		case 12: /* form feed */
+		case 13: /* carriage return */
+		case 32: /* space */
+		{
+			return true;
+		} break;
+		default:
+		{
+			return false;
+		}
+	}
+}
+
+/* NOTE: these all do the trimming in place */
+static b32 jstring_trim_left(jstring *string)
+{
+	u32 index = 0;
+	while(char_is_whitespace(string->data[index]))
+	{
+		index++;
+	}
+	if(!jstring_remove_at(string, 0, index))
+	{
+		return false;
+	}
+	return true;
+}
+static b32 jstring_trim_right(jstring *string)
+{
+	/* start at end */
+	u32 index = string->length - 1;
+	while(char_is_whitespace(string->data[index]))
+	{
+		index--;
+	}
+	if(!jstring_remove_at(string, index + 1, string->length - index - 1))
+	{
+		return false;
+	}
+	return true;
+}
+static b32 jstring_trim(jstring *string)
+{
+	if(!jstring_trim_right(string))
+	{
+		return false;
+	}
+	if(!jstring_trim_left(string))
+	{
+		return false;
+	}
+	return true;
+}
 
 #endif

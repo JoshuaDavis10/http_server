@@ -30,29 +30,32 @@
  *   char or substring with char or substring
  * x copy: I guess copy a jstring to a char * buffer or just create
  *	 another jstring instance with the same data
- * - join: concatenates strings or list of strings with a given
+ * x join: concatenates strings or list of strings with a given
  *   "separator" in between each string (i.e. a list with ", " between
  *   each string or smn could be a use case)
- * - split: like strtok but actually good basically
- * - trim: remove whitespace from beginning or end, or like all whitespace
+ * x split: like strtok but actually good basically
+ * x trim: remove whitespace from beginning or end, or like all whitespace
  *   idk that could be useful too
  * - format (create a string from a given format string? this seems
  *   complicated, but is obv very useful. actually you know what, you
  *   can do it bro wtheck ofc u can) 
- * 
- * - unit test suite once you have a set of functions you like
- * that are implemented in a way that you like
+ * - strings to variables (int, float, etc...)
+ * - add a utility function to check offset? so user can see how much
+ * room they have left
+ *
+ * - regression tests/unit tests (technically the same)
+ *
+ * - use the library for a while, add functions when needed (and
+ * unit tests for those functions)
  *
  * so there ya go! good luck :) - josh
  *
  */
 
-/* NOTE: for now I'm going to do just a temporary store that we can 
- * clear periodically or whatever to get the functions up and running 
- * because I feel like writing code that does stuff rather than thinking 
- * a whole bunch. And I feel like the string processing
- * problem space needs to be fleshed out more in my head before I can 
- * make decisions about how to manage the memory around it... does that 
- * make sense? 
- */
-
+ NOTE: random idea I had about unit/regression testing
+ - write some sort of struct that can basically store "expected" results
+ and have a function that plows through that struct and then says which
+ results (if any) are not true, so that your tests can sort of 
+ "automatically" indicate which expected conditions weren't met
+ (even if it's more than one) without you having to hand roll each one.
+ you simply add the condition to the "expected results" struct.

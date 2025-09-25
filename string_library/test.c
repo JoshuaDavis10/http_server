@@ -17,16 +17,35 @@ void print_memory_ascii(char *address, u64 offset, u64 size)
 			address, offset, size);
 	for(index = 0; index < size; index++)
 	{
-		if(index % 50 == 0)
+		if(index % 50 == 0 && index != 0)
 		{
 			putchar('\n');
 		}
-		if(tmp[index] == '\0')
+		else if(tmp[index] == '\0')
 		{
 			putchar('|');
 		}
-		putchar(tmp[index]);
+		else if(tmp[index] == '\n')
+		{
+			putchar('\\');
+			putchar('n');
+		}
+		else if(tmp[index] == '\r')
+		{
+			putchar('\\');
+			putchar('r');
+		}
+		else if(tmp[index] == '\t')
+		{
+			putchar('\\');
+			putchar('t');
+		}
+		else 
+		{
+			putchar(tmp[index]);
+		}
 	}
+	putchar('\n');
 	putchar('\n');
 }
 
@@ -41,17 +60,44 @@ void jstring_logger(const char *message, ...) {
 
 int main()
 {
-	void *string_memory = malloc(1024);
-	memset(string_memory, '-', 1024);
+	void *string_memory = malloc(4096);
+	memset(string_memory, '-', 4096);
 	jstring_load_logging_function(jstring_logger);
-	jstring_memory_activate(1024, string_memory);
+	jstring_memory_activate(4096, string_memory);
 
-	jstring test = jstring_create_temporary(
-			"test string", jstring_length("test string")); 
+	jstring trim_left = jstring_create_temporary(
+			"\n\t trim_left \n\t",
+			jstring_length("\n\t trim_left \n\t"));
+	jstring trim_right = jstring_create_temporary(
+			"\n\t trim_right \n\t",
+			jstring_length("\n\t trim_right \n\t"));
+	jstring trim = jstring_create_temporary(
+			"\n\t trim \n\t",
+			jstring_length("\n\t trim \n\t"));
+	print_memory_ascii(string_memory, 0, 300);
 
-	print_memory_ascii(string_memory, 0, 100);
-	jstring_copy_to_jstring(test);
-	print_memory_ascii(string_memory, 0, 100);
+	if(!jstring_trim_left(&trim_left))
+	{
+		printf("WOMP WOMP\n");
+		return -1;
+	}
+	print_memory_ascii(string_memory, 0, 300);
+	if(!jstring_trim_right(&trim_right))
+	{
+		printf("WOMP WOMP\n");
+		return -1;
+	}
+	print_memory_ascii(string_memory, 0, 300);
+	if(!jstring_trim(&trim))
+	{
+		printf("WOMP WOMP\n");
+		return -1;
+	}
+	print_memory_ascii(string_memory, 0, 300);
+
+	printf("trim_left: %s\n", trim_left.data);
+	printf("trim_right: %s\n", trim_right.data);
+	printf("trim: %s\n", trim.data);
 
 	return(0);
 }
