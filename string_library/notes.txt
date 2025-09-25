@@ -42,6 +42,10 @@
  * - strings to variables (int, float, etc...)
  * - add a utility function to check offset? so user can see how much
  * room they have left
+ * - TODO: in cases where you return "empty strings" you're actually
+ returning a NULL pointer data pointer so that's not great cuz users
+ could cause a segfault LOL, maybe return like a pointer to an empty 
+ string literal
  *
  * - regression tests/unit tests (technically the same)
  *
